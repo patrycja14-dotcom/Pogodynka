@@ -12,21 +12,30 @@ const measurementsRoutes = require('./routes/measurements');
 
 const app = express();
 
-// CORS – frontend na porcie 5173
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+// Dozwolone originy frontendu (dev + produkcja)
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://pogodynka-frontend.onrender.com',
+];
 
-app.use(cors({
-  origin: FRONTEND_ORIGIN,
-}));
+// CORS
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
+// JSON z body
 app.use(express.json());
 
-// test backendu
-app.get('/', (req, res) => {
+// test backendu (healthcheck)
+app.get('/api', (req, res) => {
   res.status(200).json({ message: 'Pogodynka backend działa!' });
 });
 
-// REST API 
+// REST API
 app.use('/api/auth', authRoutes);
 app.use('/api/series', seriesRoutes);
 app.use('/api/sensors', sensorsRoutes);
