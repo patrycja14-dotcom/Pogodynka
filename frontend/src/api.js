@@ -1,6 +1,6 @@
 // src/api.js
 
-// Usuwamy końcowy "/" z VITE_API_BASE_URL, jeśli ktoś go kiedyś dopisze
+// Bazowy URL API – z env albo lokalnie
 const API_URL =
   (import.meta.env.VITE_API_BASE_URL &&
     import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')) ||
@@ -48,6 +48,7 @@ export async function login(username, password) {
     throw new Error('Brak tokenu w odpowiedzi serwera');
   }
 
+  // zapis tokenu + opcjonalnie usera
   localStorage.setItem('token', data.token);
   if (data.user) {
     localStorage.setItem('user', JSON.stringify(data.user));
@@ -57,7 +58,7 @@ export async function login(username, password) {
 }
 
 /**
- * POBIERANIE SERII
+ * SERIE
  * GET /series
  */
 export async function fetchSeries() {
@@ -73,7 +74,7 @@ export async function fetchSeries() {
 }
 
 /**
- * POBIERANIE POMIARÓW
+ * POMIARY
  * GET /measurements
  */
 export async function fetchMeasurements({ seriesIds, from, to }) {
@@ -158,10 +159,44 @@ export async function deleteSeries(id) {
 }
 
 /**
+ * TWORZENIE POMIARU
+ * POST /measurements
+ */
+export async function createMeasurement(payload) {
+  const res = await fetch(`${API_URL}/measurements`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error('Błąd tworzenia pomiaru');
+  }
+
+  return res.json();
+}
+
+/**
+ * AKTUALIZACJA POMIARU
+ * PUT /measurements/:id
+ */
+export async function updateMeasurement(id, payload) {
+  const res = await fetch(`${API_URL}/measurements/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error('Błąd aktualizacji pomiaru');
+  }
+
+  return res.json();
+}
+
+/**
  * USUWANIE POMIARU
  * DELETE /measurements/:id
- * (ta funkcja jest potrzebna, bo jest importowana gdzieś w komponentach:
- *  `import { ..., deleteMeasurement } from '../api';`)
  */
 export async function deleteMeasurement(id) {
   const res = await fetch(`${API_URL}/measurements/${id}`, {
