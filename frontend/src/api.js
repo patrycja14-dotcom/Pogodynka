@@ -20,9 +20,7 @@ function authHeaders(extra = {}) {
 
 /**
  * LOGOWANIE
- * Wywołuje: POST /auth/login
- * Body: { username, password }
- * Zapisuje token w localStorage
+ * POST /auth/login
  */
 export async function login(username, password) {
   const res = await fetch(`${API_URL}/auth/login`, {
@@ -46,12 +44,10 @@ export async function login(username, password) {
     throw new Error(message);
   }
 
-  // Oczekujemy, że backend zwróci co najmniej { token: '...' }
   if (!data.token) {
     throw new Error('Brak tokenu w odpowiedzi serwera');
   }
 
-  // Zapis tokenu i ewentualnych danych użytkownika
   localStorage.setItem('token', data.token);
   if (data.user) {
     localStorage.setItem('user', JSON.stringify(data.user));
@@ -79,7 +75,6 @@ export async function fetchSeries() {
 /**
  * POBIERANIE POMIARÓW
  * GET /measurements
- * Query params: seriesId, from, to
  */
 export async function fetchMeasurements({ seriesIds, from, to }) {
   const params = new URLSearchParams();
@@ -108,7 +103,6 @@ export async function fetchMeasurements({ seriesIds, from, to }) {
 /**
  * TWORZENIE SERII
  * POST /series
- * Body: { name, ... }
  */
 export async function createSeries(payload) {
   const res = await fetch(`${API_URL}/series`, {
@@ -156,7 +150,29 @@ export async function deleteSeries(id) {
     throw new Error('Błąd usuwania serii');
   }
 
-  // Możliwe, że backend zwróci { success: true } albo 204 bez body.
+  try {
+    return await res.json();
+  } catch {
+    return { success: true };
+  }
+}
+
+/**
+ * USUWANIE POMIARU
+ * DELETE /measurements/:id
+ * (ta funkcja jest potrzebna, bo jest importowana gdzieś w komponentach:
+ *  `import { ..., deleteMeasurement } from '../api';`)
+ */
+export async function deleteMeasurement(id) {
+  const res = await fetch(`${API_URL}/measurements/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error('Błąd usuwania pomiaru');
+  }
+
   try {
     return await res.json();
   } catch {
