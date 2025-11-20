@@ -1,59 +1,72 @@
 // src/api.js
 
-// lokalnie będzie http://localhost:4000/api
-// na serwerze ustawiamy VITE_API_BASE_URL w panelu Render
+// Usuwamy końcowy "/" z VITE_API_BASE_URL, jeśli ktoś go kiedyś dopisze
 const API_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+  (import.meta.env.VITE_API_BASE_URL &&
+    import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')) ||
+  'http://localhost:4000/api';
 
-// --------------------------------------------------
-// POMOCNICZO – token JWT trzymamy w localStorage
-// --------------------------------------------------
+// Pomocnicza funkcja do nagłówków z tokenem
+function authHeaders(extra = {}) {
+  const token = localStorage.getItem('token');
 
-export function saveToken(token) {
-  localStorage.setItem('authToken', token);
+  return {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
 }
 
-export function getToken() {
-  return localStorage.getItem('authToken');
-}
-
-export function clearToken() {
-  localStorage.removeItem('authToken');
-}
-
-// mały helper do zapytań wymagających autoryzacji
-async function authRequest(path, options = {}) {
-  const token = getToken();
-
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
+/**
+ * LOGOWANIE
+ * Wywołuje: POST /auth/login
+ * Body: { username, password }
+ * Zapisuje token w localStorage
+ */
+export async function login(username, password) {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
+    body: JSON.stringify({ username, password }),
   });
 
-  // przy DELETE często jest 204 bez body
-  if (res.status === 204) return;
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || 'Błąd żądania');
+  let data = {};
+  try {
+    data = await res.json();
+  } catch (_) {
+    // jeśli brak JSON, zostawiamy pusty obiekt
   }
 
-  return res.json();
+  if (!res.ok) {
+    const message = data?.message || 'Błąd logowania';
+    throw new Error(message);
+  }
+
+  // Oczekujemy, że backend zwróci co najmniej { token: '...' }
+  if (!data.token) {
+    throw new Error('Brak tokenu w odpowiedzi serwera');
+  }
+
+  // Zapis tokenu i ewentualnych danych użytkownika
+  localStorage.setItem('token', data.token);
+  if (data.user) {
+    localStorage.setItem('user', JSON.stringify(data.user));
+  }
+
+  return data;
 }
 
-// --------------------------------------------------
-// PUBLICZNA CZĘŚĆ – wykres i tabela
-// --------------------------------------------------
-
-// pobieranie serii pomiarowych
+/**
+ * POBIERANIE SERII
+ * GET /series
+ */
 export async function fetchSeries() {
   const res = await fetch(`${API_URL}/series`, {
-    headers: { Accept: 'application/json' },
+    headers: authHeaders(),
   });
 
   if (!res.ok) {
@@ -63,15 +76,17 @@ export async function fetchSeries() {
   return res.json();
 }
 
-// pobieranie pomiarów z filtrami
+/**
+ * POBIERANIE POMIARÓW
+ * GET /measurements
+ * Query params: seriesId, from, to
+ */
 export async function fetchMeasurements({ seriesIds, from, to }) {
   const params = new URLSearchParams();
 
-  if (seriesIds && seriesIds.length > 0) {
+  if (seriesIds?.length) {
     params.append('seriesId', seriesIds.join(','));
   }
-
-  // zamiana daty z <input type="datetime-local"> na ISO
   if (from) {
     params.append('from', new Date(from).toISOString());
   }
@@ -79,10 +94,8 @@ export async function fetchMeasurements({ seriesIds, from, to }) {
     params.append('to', new Date(to).toISOString());
   }
 
-  const url = `${API_URL}/measurements?${params.toString()}`;
-
-  const res = await fetch(url, {
-    headers: { Accept: 'application/json' },
+  const res = await fetch(`${API_URL}/measurements?${params.toString()}`, {
+    headers: authHeaders(),
   });
 
   if (!res.ok) {
@@ -92,80 +105,61 @@ export async function fetchMeasurements({ seriesIds, from, to }) {
   return res.json();
 }
 
-// --------------------------------------------------
-// LOGOWANIE ADMINA
-// --------------------------------------------------
-
-export async function login(username, password) {
-  const res = await fetch(`${API_URL}/auth/login`, {
+/**
+ * TWORZENIE SERII
+ * POST /series
+ * Body: { name, ... }
+ */
+export async function createSeries(payload) {
+  const res = await fetch(`${API_URL}/series`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    throw new Error('Błędny login lub hasło');
+    throw new Error('Błąd tworzenia serii');
   }
 
-  const data = await res.json();
-  // zakładam, że backend zwraca { token: '...' }
-  if (data.token) {
-    saveToken(data.token);
-  }
-
-  return data;
+  return res.json();
 }
 
-// --------------------------------------------------
-// ADMIN – SERIE POMIAROWE
-// --------------------------------------------------
-
-// POST /api/series
-export function createSeries(payload) {
-  return authRequest('/series', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-// PUT /api/series/:id
-export function updateSeries(id, payload) {
-  return authRequest(`/series/${id}`, {
+/**
+ * AKTUALIZACJA SERII
+ * PUT /series/:id
+ */
+export async function updateSeries(id, payload) {
+  const res = await fetch(`${API_URL}/series/${id}`, {
     method: 'PUT',
+    headers: authHeaders(),
     body: JSON.stringify(payload),
   });
+
+  if (!res.ok) {
+    throw new Error('Błąd aktualizacji serii');
+  }
+
+  return res.json();
 }
 
-// DELETE /api/series/:id
+/**
+ * USUWANIE SERII
+ * DELETE /series/:id
+ */
 export async function deleteSeries(id) {
-  await authRequest(`/series/${id}`, {
+  const res = await fetch(`${API_URL}/series/${id}`, {
     method: 'DELETE',
+    headers: authHeaders(),
   });
-}
 
-// --------------------------------------------------
-// ADMIN – POMIARY (dla MeasurementsManager, jeśli używasz)
-// --------------------------------------------------
+  if (!res.ok) {
+    throw new Error('Błąd usuwania serii');
+  }
 
-// POST /api/measurements
-export function createMeasurement(payload) {
-  return authRequest('/measurements', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-// PUT /api/measurements/:id
-export function updateMeasurement(id, payload) {
-  return authRequest(`/measurements/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-}
-
-// DELETE /api/measurements/:id
-export async function deleteMeasurement(id) {
-  await authRequest(`/measurements/${id}`, {
-    method: 'DELETE',
-  });
+  // Możliwe, że backend zwróci { success: true } albo 204 bez body.
+  try {
+    return await res.json();
+  } catch {
+    return { success: true };
+  }
 }

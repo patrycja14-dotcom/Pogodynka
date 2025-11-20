@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import ChartView from './ChartView';
 import LoginPanel from './components/LoginPanel';
 import AdminPanel from './components/AdminPanel';
+import SeriesManager from './components/SeriesManager.jsx';
 
 const API_URL = 'http://localhost:4000/api';
 
