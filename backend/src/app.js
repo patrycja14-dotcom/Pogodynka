@@ -4,7 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 const { PORT } = require('./config');
 
-// import istniejących tras
+// import tras
 const authRoutes = require('./routes/auth');
 const seriesRoutes = require('./routes/series');
 const sensorsRoutes = require('./routes/sensors');
@@ -12,25 +12,17 @@ const measurementsRoutes = require('./routes/measurements');
 
 const app = express();
 
-// Dozwolone originy frontendu (dev + produkcja)
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://pogodynka-frontend.onrender.com',
-];
+/**
+ * CORS – na tym etapie odblokowujemy WSZYSTKO, żeby przestały się pojawiać błędy CORS.
+ * Jak wszystko zadziała, można to później zaostrzyć.
+ */
+app.use(cors());
+app.options('*', cors()); // preflight dla wszystkich metod
 
-// CORS
-app.use(
-  cors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
-// JSON z body
+// JSON body
 app.use(express.json());
 
-// test backendu (healthcheck)
+// test backendu
 app.get('/api', (req, res) => {
   res.status(200).json({ message: 'Pogodynka backend działa!' });
 });
