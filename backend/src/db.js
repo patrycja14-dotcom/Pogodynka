@@ -7,7 +7,8 @@ const config = {};
 
 if (process.env.DATABASE_URL) {
   config.connectionString = process.env.DATABASE_URL;
-  config.ssl = { rejectUnauthorized: false }; // wymagane na Renderze
+  // Render Postgres wymaga SSL
+  config.ssl = { rejectUnauthorized: false };
 }
 
 const pool = new Pool(config);
