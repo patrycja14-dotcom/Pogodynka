@@ -2,29 +2,28 @@
 import React, { useState } from 'react';
 import { login } from '../api';
 
-function LoginPanel({ onLogin }) {
+function LoginPanel({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (event) => {
-    event.preventDefault(); // ważne – bez tego formularz robi "hard reload"
+    event.preventDefault(); // bez tego formularz robi "hard reload"
     setError('');
     setLoading(true);
 
     try {
-      const data = await login(username, password);
+      const data = await login(username.trim(), password); // { token, user }
 
-      // Jeśli rodzic przekazuje callback – poinformuj go o sukcesie
-      if (onLogin) {
-        onLogin(data);
-      } else {
-        // Minimalny fallback – przejście do panelu admina lub reload
-        // Dopasuj ścieżkę do tego, jak masz zrobiony routing (np. /admin)
-        window.location.href = '/admin';
-        // lub: window.location.reload();
+      // jeśli rodzic przekazuje callback – informujemy go o sukcesie
+      if (onLoginSuccess) {
+        onLoginSuccess(data.token, data.user);
       }
+
+      // opcjonalne czyszczenie formularza po sukcesie
+      setPassword('');
+      // login zostawiamy, żeby było widać kto jest zalogowany
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Nie udało się zalogować');
@@ -62,7 +61,11 @@ function LoginPanel({ onLogin }) {
           />
         </div>
 
-        {error && <p className="error" style={{ color: 'red' }}>{error}</p>}
+        {error && (
+          <p className="error" style={{ color: 'red' }}>
+            {error}
+          </p>
+        )}
 
         <button type="submit" disabled={loading}>
           {loading ? 'Logowanie...' : 'Zaloguj'}

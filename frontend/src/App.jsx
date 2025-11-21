@@ -1,31 +1,31 @@
-// frontend/src/App.jsx
+// src/App.jsx
 import { useState, useEffect } from 'react';
-import LoginPanel from './components/LoginPanel';
+import LoginPanel from './components/LoginPanel.jsx';
+import AdminPanel from './components/AdminPanel.jsx';
 
 export default function App() {
-  const [token, setToken] = useState(null);
+  const [logged, setLogged] = useState(false);
 
-  // przy starcie spróbuj odczytać token z localStorage
+  // sprawdzamy token przy starcie aplikacji
   useEffect(() => {
-    const saved = localStorage.getItem('token');
-    if (saved) {
-      setToken(saved);
+    const token = localStorage.getItem('token');
+    if (token) {
+      setLogged(true);
     }
   }, []);
 
-  const handleLoginSuccess = (token, user) => {
-    // token i user są już zapisywane w api.login, ale dla pewności:
-    if (token) {
-      localStorage.setItem('token', token);
-      setToken(token);
-    }
+  // callback po poprawnym logowaniu
+  const handleLoginSuccess = () => {
+    setLogged(true);
   };
 
-  // Na razie ZAWSZE pokazujemy ekran logowania
-  // (później można tu dodać AdminPanel, jak logowanie będzie działać)
   return (
     <div>
-      <LoginPanel onLoginSuccess={handleLoginSuccess} />
+      {logged ? (
+        <AdminPanel />
+      ) : (
+        <LoginPanel onLoginSuccess={handleLoginSuccess} />
+      )}
     </div>
   );
 }
