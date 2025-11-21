@@ -12,12 +12,8 @@ const measurementsRoutes = require('./routes/measurements');
 
 const app = express();
 
-/**
- * CORS – na tym etapie odblokowujemy WSZYSTKO, żeby przestały się pojawiać błędy CORS.
- * Jak wszystko zadziała, można to później zaostrzyć.
- */
+// CORS – na razie globalnie, żeby nie było błędów CORS
 app.use(cors());
-app.options('*', cors()); // preflight dla wszystkich metod
 
 // JSON body
 app.use(express.json());
