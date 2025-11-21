@@ -5,6 +5,7 @@ const API_URL =
   (import.meta.env.VITE_API_BASE_URL &&
     import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')) ||
   'http://localhost:4000/api';
+console.log('[API_URL w buildzie]', API_URL);
 
 // Pomocnicza funkcja do nagłówków z tokenem
 function authHeaders(extra = {}) {
